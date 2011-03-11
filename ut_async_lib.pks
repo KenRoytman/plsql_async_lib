@@ -9,5 +9,9 @@ is
 
   procedure ut_run;
 
+  procedure ut_wait;
+
+  procedure test;
+
 end ut_async_lib;
 /

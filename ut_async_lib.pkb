@@ -1,17 +1,41 @@
 create or replace package body ut_async_lib
 is
 
+  --{{ ut_setup
+
   procedure ut_setup
   is
   begin
-    null;
+      execute immediate q'#
+        create table ut_run_tab ( c1 number )
+      #';
+
+      execute immediate q'#
+        create or replace procedure ut_run_proc(p_in in number)
+        is
+        begin
+          insert into ut_run_tab values (p_in); 
+
+          commit;
+        end ut_run_proc;
+        #';
   end ut_setup;
+
+  --}}
+
+  --{{ procedure ut_teardown
 
   procedure ut_teardown
   is
   begin
-    null;
+      execute immediate 'drop procedure ut_run_proc'; 
+
+      execute immediate 'drop table ut_run_tab purge';
   end ut_teardown;
+
+  --}} 
+
+  --{{ procedure ut_is_async_active
 
   procedure ut_is_async_active
   is
@@ -38,7 +62,7 @@ is
     l_test_val := async_lib.is_async_active();
   
     utassert.eq (
-      msg_in => 'JOB_QUEUE_PROCESSES is <= 0'
+      msg_in => 'JOB_QUEUE_PROCESSES is less than or equal to 0'
     , check_this_in => l_test_val
     , against_this_in => false
     );    
@@ -65,45 +89,37 @@ is
 
   end ut_is_async_active;
 
+  --}}
+
+  --{{ procedure ut_run
+
   procedure ut_run
   is
     l_row_count number;
 
-
     procedure setup
     is
     begin
-
-      execute immediate q'#
-        create table ut_run_tab ( c1 number )
-      #';
-
-      execute immediate q'#
-        create or replace procedure ut_run_proc
-        is
-        begin
-          insert into ut_run_tab values (1); 
-
-          commit;
-        end ut_run_proc;
-        #';
-
+      null;
     end setup;
 
     procedure teardown
     is
     begin
+      execute immediate 'delete ut_run_tab';
 
-      execute immediate 'drop procedure ut_run_proc'; 
+      commit;
 
-      execute immediate 'drop table ut_run_tab purge';
+      async_lib.reset_state();
     end teardown;
 
   begin
 
     setup();
 
-    async_lib.run('ut_run_proc();');
+    async_lib.run('ut_run_proc(1);');
+
+    async_lib.wait();
 
     execute immediate
     q'#
@@ -123,7 +139,83 @@ is
     -- what happens when a function is passed in
     --
 
+  exception
+    when others then
+      teardown();
+
+      raise;
+
   end ut_run;
+
+  --}}
+
+  --{{ procedure ut_wait
+
+  procedure ut_wait
+  is
+    l_job_map   async_lib.t_job_map;
+
+    procedure setup
+    is
+    begin
+      null;
+    end setup;
+
+    procedure teardown
+    is
+    begin
+      execute immediate 'delete ut_run_tab';
+
+      commit;
+
+      async_lib.reset_state();
+    end teardown;
+  begin
+
+    setup();
+
+    async_lib.run('ut_run_proc(1);');
+    async_lib.run('ut_run_proc(2);');
+    async_lib.run('ut_run_proc(3);');
+    async_lib.run('ut_run_proc(4);');
+
+    l_job_map := async_lib.job_map();
+
+    utassert.eq
+    (
+      msg_in => 'testing scheduled processes before issuing wait()'
+    , check_this_in => l_job_map.count
+    , against_this_in => 4
+    );
+
+    async_lib.wait();
+
+    l_job_map := async_lib.job_map();
+
+    utassert.eq
+    (
+      msg_in => 'testing scheduled processes after issuing wait()'
+    , check_this_in => l_job_map.count
+    , against_this_in => 0
+    );
+
+    teardown();
+
+  exception
+    when others then
+      teardown();
+
+      raise;
+
+  end ut_wait;
+
+  --}}
+
+  procedure test
+  is
+  begin
+    utplsql.test(package_in => 'async_lib', recompile_in => false);  
+  end test;
 
 end ut_async_lib;
 /
