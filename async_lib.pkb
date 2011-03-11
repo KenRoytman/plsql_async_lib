@@ -15,7 +15,6 @@ is
   -----------------------
   --<< private types >>--
   -----------------------
-  type t_job_map is table of st_job_name index by st_alert;
 
   -------------------------------
   --<< session scope globals >>--
@@ -71,6 +70,16 @@ is
   --<< public modules >>--
   ------------------------
 
+  --{{ procedure job_map
+  function job_map
+    return t_job_map
+  is
+  begin
+    return g_job_vector;
+  end job_map;
+
+  --}}
+
   --{{ procedure run
   --
   -- only supports procedures for now
@@ -89,9 +98,9 @@ is
     end if;
 
     l_alert := rawtohex(dbms_crypto.randombytes(8));
+    l_job_name := dbms_scheduler.generate_job_name(prefix => 'ASYNC$_');
     
-    g_job_vector(l_alert) :=
-      dbms_scheduler.generate_job_name(prefix => 'ASYNC$_');
+    g_job_vector(l_alert) := l_job_name;
       
     dbms_alert.register(l_alert);
 

@@ -36,6 +36,8 @@ is
   subtype st_job_name is varchar2(64);
   subtype st_job_error_trc is varchar2(2048);
 
+  type t_job_map is table of st_job_name index by st_alert;
+
   type t_async_res_rec is record (
     job_status    integer  
   , alert_name    st_alert
@@ -58,6 +60,9 @@ is
   ---------------------------
   --<< public modules >>--
   ---------------------------
+
+  function job_map
+    return t_job_map;
 
   procedure run (c in varchar2);
 
