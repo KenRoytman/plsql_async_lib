@@ -36,6 +36,9 @@ is
     l_cursor := dbms_sql.open_cursor();
     dbms_sql.parse(l_cursor, p_code, dbms_sql.native);
     dbms_sql.close_cursor(l_cursor);
+  exception
+    when others then
+      async_lib_err.err_job_syntax();
   end check_syntax;
 
   --}}
@@ -71,11 +74,15 @@ is
   --<< public modules >>--
   ------------------------
 
+  --{{ procedure reset_state
+
   procedure reset_state
   is
   begin
     g_job_vector := g_empty_job_vector;
   end reset_state;
+
+  --}}
 
   --{{ procedure job_map
   function job_map
@@ -158,10 +165,11 @@ is
   procedure wait
   is
     l_looper  boolean := true;
-    l_alert   st_alert;
+    l_alert st_alert;
     l_message varchar2(32767); 
     l_status  integer;
   begin
+
     while (l_looper)
     loop
 
