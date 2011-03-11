@@ -12,13 +12,13 @@ is
       );
   end err_job_queue;
 
-  procedure err_job_syntax(msg in varchar2)
+  procedure err_job_syntax
   is
   begin
       raise_application_error
       (
         -20002
-      , 'async_lib: invalid syntax!'||chr(10)||msg
+      , 'async_lib: invalid syntax!'
       ,true
       );
   end err_job_syntax;
