@@ -20,6 +20,7 @@ is
   --<< session scope globals >>--
   -------------------------------
   g_job_vector    t_job_map;
+  g_empty_job_vector t_job_map;
   g_return_tab    t_async_res_tab;
   
   -------------------------
@@ -69,6 +70,12 @@ is
   ------------------------
   --<< public modules >>--
   ------------------------
+
+  procedure reset_state
+  is
+  begin
+    g_job_vector := g_empty_job_vector;
+  end reset_state;
 
   --{{ procedure job_map
   function job_map

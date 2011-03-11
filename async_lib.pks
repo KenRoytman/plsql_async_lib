@@ -61,6 +61,8 @@ is
   --<< public modules >>--
   ---------------------------
 
+  procedure reset_state;
+
   function job_map
     return t_job_map;
 
