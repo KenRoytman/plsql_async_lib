@@ -63,6 +63,9 @@ is
 
   procedure reset_state;
 
+  function alert_info_sid
+    return varchar2;
+
   function job_map
     return t_job_map;
 
