@@ -74,12 +74,32 @@ is
   --<< public modules >>--
   ------------------------
 
+  function alert_info_sid
+    return varchar2
+  is
+    l_sid number;
+    l_serial# number;
+    l_instance_id number;
+    l_ret varchar2(12);
+  begin
+    select
+      lpad(to_char(sid, 'fmXXXX'), 4,'0') ||
+      lpad(to_char(serial#, 'fmXXXX'),4,'0') ||
+      lpad(to_char(sys_context('userenv','instance'), 'fmXXXX'),4,'0')
+        into l_ret
+    from v$session
+    where sid = sys_context('userenv','sid');
+
+    return l_ret;
+  end alert_info_sid;
+
   --{{ procedure reset_state
 
   procedure reset_state
   is
   begin
     g_job_vector := g_empty_job_vector;
+    dbms_alert.removeall();
   end reset_state;
 
   --}}
