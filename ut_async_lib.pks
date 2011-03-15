@@ -13,6 +13,8 @@ is
 
   procedure ut_reset_state;
 
+  procedure ut_alert_info_sid;
+
   procedure test;
 
 end ut_async_lib;

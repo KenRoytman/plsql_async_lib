@@ -286,6 +286,62 @@ is
 
   --}}
 
+  --{{ procedure ut_alert_info_sid
+
+  procedure ut_alert_info_sid
+  is
+
+    l_row_count pls_integer;
+
+    procedure setup
+    is
+    begin
+      execute immediate q'#
+        create or replace procedure ut_async_lib_sid
+        is
+        begin
+          dbms_lock.sleep(1);
+        end ut_async_lib_sid;
+        #';
+
+    end setup;
+
+    procedure teardown
+    is
+    begin
+      execute immediate 'drop procedure ut_async_lib_sid';
+      async_lib.reset_state();
+    end teardown;
+  begin
+    setup();
+
+    async_lib.run('ut_async_lib_sid();');
+    async_lib.run('ut_async_lib_sid();');
+    async_lib.run('ut_async_lib_sid();');
+
+    select count(*)
+      into l_row_count
+    from sys.dbms_alert_info
+    where sid = async_lib.alert_info_sid();
+
+    utassert.eq
+    (
+      msg_in => 'testing registered alerts in sys.dbms_alert_info'
+    , check_this_in => l_row_count
+    , against_this_in => 3
+    );
+
+    teardown();
+  exception
+    when others then
+      teardown();
+
+      raise;
+
+  end ut_alert_info_sid;
+
+  --}}
+
   procedure test
   is
   begin
