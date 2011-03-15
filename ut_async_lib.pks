@@ -11,6 +11,8 @@ is
 
   procedure ut_wait;
 
+  procedure ut_reset_state;
+
   procedure test;
 
 end ut_async_lib;

@@ -7,17 +7,18 @@ is
   is
   begin
       execute immediate q'#
-        create table ut_run_tab ( c1 number )
+        create table ut_async_lib_tab ( c1 number )
       #';
 
       execute immediate q'#
-        create or replace procedure ut_run_proc(p_in in number)
+        create or replace procedure ut_async_lib_proc(p_in in number)
         is
         begin
-          insert into ut_run_tab values (p_in); 
+          insert into ut_async_lib_tab values (p_in); 
 
           commit;
-        end ut_run_proc;
+
+        end ut_async_lib_proc;
         #';
   end ut_setup;
 
@@ -28,9 +29,9 @@ is
   procedure ut_teardown
   is
   begin
-      execute immediate 'drop procedure ut_run_proc'; 
+      execute immediate 'drop procedure ut_async_lib_proc'; 
 
-      execute immediate 'drop table ut_run_tab purge';
+      execute immediate 'drop table ut_async_lib_tab purge';
   end ut_teardown;
 
   --}} 
@@ -106,7 +107,7 @@ is
     procedure teardown
     is
     begin
-      execute immediate 'delete ut_run_tab';
+      execute immediate 'delete ut_async_lib_tab';
 
       commit;
 
@@ -117,14 +118,14 @@ is
 
     setup();
 
-    async_lib.run('ut_run_proc(1);');
+    async_lib.run('ut_async_lib_proc(1);');
 
     async_lib.wait();
 
     execute immediate
     q'#
         select count(*)
-        from ut_run_tab
+        from ut_async_lib_tab
     #' into l_row_count;
 
     utassert.eq (
@@ -134,10 +135,6 @@ is
     );    
 
     teardown();
-
-    -- test that a scheduled proc runs!
-    -- what happens when a function is passed in
-    --
 
   exception
     when others then
@@ -164,7 +161,7 @@ is
     procedure teardown
     is
     begin
-      execute immediate 'delete ut_run_tab';
+      execute immediate 'delete ut_async_lib_tab';
 
       commit;
 
@@ -174,10 +171,10 @@ is
 
     setup();
 
-    async_lib.run('ut_run_proc(1);');
-    async_lib.run('ut_run_proc(2);');
-    async_lib.run('ut_run_proc(3);');
-    async_lib.run('ut_run_proc(4);');
+    async_lib.run('ut_async_lib_proc(1);');
+    async_lib.run('ut_async_lib_proc(2);');
+    async_lib.run('ut_async_lib_proc(3);');
+    async_lib.run('ut_async_lib_proc(4);');
 
     l_job_map := async_lib.job_map();
 
@@ -199,6 +196,17 @@ is
     , against_this_in => 0
     );
 
+    -- 1. test message communication when a job raises an exception
+
+    -- 2. test situation where an alert is signaled but is not
+    --    in async_lib's job vector.
+    --
+    --    this can happen with the following order of events:
+    --      async_lib.run(...);
+    --      async_lib.reset_state();
+    --      async_lib.run(...);
+    --      async_lib.wait();
+
     teardown();
 
   exception
@@ -208,6 +216,73 @@ is
       raise;
 
   end ut_wait;
+
+  --}}
+
+  --{{ procedure ut_reset_state
+
+  procedure ut_reset_state
+  is
+    l_row_count pls_integer;
+
+    l_job_map   async_lib.t_job_map;
+
+    procedure setup
+    is
+    begin
+      execute immediate q'#
+        create or replace procedure ut_async_lib_reset
+        is
+        begin
+          dbms_lock.sleep(3);  
+        end ut_async_lib_reset;
+        #';
+
+    end setup;
+
+    procedure teardown
+    is
+    begin
+      execute immediate 'drop procedure ut_async_lib_reset';
+    end teardown;
+
+  begin
+
+    setup();
+
+    async_lib.run('ut_async_lib_reset();');
+    async_lib.reset_state();
+
+    l_job_map := async_lib.job_map(); 
+
+    select count(*)
+      into l_row_count
+    from sys.dbms_alert_info
+    where sid = async_lib.alert_info_sid();
+
+    utassert.eq
+    (
+      msg_in => 'testing registered alerts.  wait() not called.'
+    , check_this_in => l_row_count
+    , against_this_in => 0
+    );
+
+    utassert.eq
+    (
+      msg_in => 'testing async_lib job map.  wait() not called.'
+    , check_this_in => l_job_map.count
+    , against_this_in => 0
+    );
+
+    teardown();
+
+  exception
+    when others then
+      teardown();
+  
+      raise;
+
+  end ut_reset_state;
 
   --}}
 
