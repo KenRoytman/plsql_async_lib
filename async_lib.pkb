@@ -19,9 +19,10 @@ is
   -------------------------------
   --<< session scope globals >>--
   -------------------------------
-  g_job_vector    t_job_map;
-  g_empty_job_vector t_job_map;
-  g_return_tab    t_async_res_tab;
+  g_job_vector        t_job_map;
+  g_empty_job_vector  t_job_map;
+  g_return_tab        t_async_res_tab;
+  g_empty_return_tab  t_async_res_tab;
   
   -------------------------
   --<< private modules >>--
@@ -103,6 +104,7 @@ is
   is
   begin
     g_job_vector := g_empty_job_vector;
+    g_return_tab := g_empty_return_tab;
     dbms_alert.removeall();
   end reset_state;
 
@@ -224,6 +226,39 @@ is
 
     async_results := g_return_tab;
   end wait;
+
+  --}}
+
+  --{{ procedure pretty_print_async_results
+  procedure pretty_print_async_results
+  is
+  begin
+    pretty_print_async_results(g_return_tab);
+  end pretty_print_async_results;
+  --}}
+
+  --{{ procedure pretty_print_async_results
+
+  procedure pretty_print_async_results
+    (p_async_results in async_lib.t_async_res_tab)
+  is
+    l_iter            st_job_name; 
+  begin
+
+    dbms_output.enable(1000000);
+
+    l_iter := p_async_results.first(); 
+
+    loop
+      exit when ( l_iter is null );
+
+      dbms_output.put_line( '<<job>>: '||l_iter);
+      dbms_output.put_line( '<<msg>>: '||p_async_results(l_iter).message );
+
+      l_iter := p_async_results.next(l_iter);
+    end loop;
+
+  end pretty_print_async_results;
 
   --}}
 
