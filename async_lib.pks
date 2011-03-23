@@ -80,5 +80,10 @@ is
 
   procedure wait (async_results out async_lib.t_async_res_tab);
 
+  procedure pretty_print_async_results;
+
+  procedure pretty_print_async_results
+    (p_async_results in async_lib.t_async_res_tab);
+
 end async_lib;
 /
