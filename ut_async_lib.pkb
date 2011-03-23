@@ -1,6 +1,24 @@
 create or replace package body ut_async_lib
 is
 
+  --{{ function reg_alert_count
+
+  function reg_alert_count
+    return integer
+  is
+    l_count  integer;
+  begin
+
+    select count(*)
+      into l_count
+    from sys.dbms_alert_info
+    where sid = async_lib.alert_info_sid();
+
+    return l_count;
+  end reg_alert_count;
+
+  --}}
+
   --{{ ut_setup
 
   procedure ut_setup
@@ -180,9 +198,18 @@ is
 
     utassert.eq
     (
-      msg_in => 'testing scheduled processes before issuing wait()'
+      msg_in => 'job map count vs. constant before issuing wait()'
     , check_this_in => l_job_map.count
     , against_this_in => 4
+    );
+
+    utassert.eq
+    (
+      msg_in =>
+        'job map count vs. data dictionary registered alerts ' ||
+        'before issuing wait()'
+    , check_this_in => l_job_map.count
+    , against_this_in => reg_alert_count()
     );
 
     async_lib.wait();
@@ -191,9 +218,18 @@ is
 
     utassert.eq
     (
-      msg_in => 'testing scheduled processes after issuing wait()'
+      msg_in => 'job map count vs. constant after issuing wait()'
     , check_this_in => l_job_map.count
     , against_this_in => 0
+    );
+
+    utassert.eq
+    (
+      msg_in =>
+        'job map count vs. data dictionary registered alerts ' ||
+        'before issuing wait()'
+    , check_this_in => l_job_map.count
+    , against_this_in => reg_alert_count()
     );
 
     -- 1. test message communication when a job raises an exception
