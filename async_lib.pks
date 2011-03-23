@@ -33,15 +33,15 @@ is
   ----------------------
   subtype st_run is pls_integer range 0 .. 4;
   subtype st_alert is varchar2(32);
+  subtype st_msg is varchar2(1800);
   subtype st_job_name is varchar2(64);
   subtype st_job_error_trc is varchar2(2048);
 
   type t_job_map is table of st_job_name index by st_alert;
 
   type t_async_res_rec is record (
-    job_status    integer  
-  , alert_name    st_alert
-  , error_trace   st_job_error_trc
+    alert    st_alert
+  , message  st_msg
   );
 
   type t_async_res_tab is table of t_async_res_rec

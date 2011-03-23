@@ -188,21 +188,23 @@ is
 
   procedure wait
   is
-    l_alert st_alert;
-    l_message varchar2(32767); 
+    l_alert   st_alert;
+    l_msg     st_msg;
     l_status  integer;
   begin
 
     while (g_job_vector.count > 0)
     loop
 
-      dbms_alert.waitany (
+      dbms_alert.waitany
+      (
         name    => l_alert
-      , message => l_message
+      , message => l_msg
       , status  => l_status
       );
 
-      g_return_tab( g_job_vector(l_alert) ).job_status := -1;
+      g_return_tab( g_job_vector(l_alert) ).alert := l_alert;
+      g_return_tab( g_job_vector(l_alert) ).message := l_msg;
 
       g_job_vector.delete(l_alert);
 
