@@ -73,5 +73,12 @@ is
 
   procedure wait;
 
+  --
+  -- pl/sql function cannot return a pl/sql associative array
+  -- in 10.2.0.3
+  --
+
+  procedure wait (async_results out async_lib.t_async_res_tab);
+
 end async_lib;
 /

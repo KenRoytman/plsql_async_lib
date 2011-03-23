@@ -74,7 +74,7 @@ is
   --<< public modules >>--
   ------------------------
 
-  --{{
+  --{{ function alert_info_sid
 
   function alert_info_sid
     return varchar2
@@ -211,6 +211,18 @@ is
 
     end loop;
 
+  end wait;
+
+  --}}
+
+  --{{ procedure wait overload #1
+
+  procedure wait (async_results out async_lib.t_async_res_tab)
+  is
+  begin
+    wait();
+
+    async_results := g_return_tab;
   end wait;
 
   --}}
