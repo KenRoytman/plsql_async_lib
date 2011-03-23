@@ -144,27 +144,45 @@ is
       
     dbms_alert.register(l_alert);
 
-    l_job_action := 
-        'begin'
-        ||chr(10)||c||chr(10)||
-        'dbms_alert.signal(name => '''
-        ||l_alert||
-        ''', message => '''');'
-        ||chr(10)||
-        'commit;'
-        ||chr(10)||
-        'exception'
-        ||chr(10)||
-        'when others then'
-        ||chr(10)||         
-        'dbms_alert.signal( name => '''
-        ||l_alert||
-        ''', message => '||
-        'dbms_utility.format_error_stack()'
-        ||'||chr(10)||'||
-        'dbms_utility.format_error_backtrace()'
-        ||');'||chr(10)||
-        'end;';
+    l_job_action := q'#
+        declare
+          l_message async_lib.st_msg; 
+        begin #'||c||q'#
+
+          dbms_alert.signal
+          (
+            name => '#'||l_alert||q'#'
+          , message => ''
+          );
+
+          commit;
+
+        exception
+          when others then
+            l_message :=
+              replace
+              (
+                replace
+                (
+                  '<e>'
+                  ||dbms_utility.format_error_stack()||
+                  '</e><s>'
+                  ||dbms_utility.format_error_backtrace()||
+                  '</s>'
+                , chr(10)
+                , ''
+                )
+              , chr(13)
+              , ''
+              );
+
+            dbms_alert.signal
+            (
+              name => '#'||l_alert||q'#'
+            , message => l_message
+            );
+        end; #';
+ 
         
     check_syntax(l_job_action);
 
