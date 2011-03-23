@@ -74,6 +74,8 @@ is
   --<< public modules >>--
   ------------------------
 
+  --{{
+
   function alert_info_sid
     return varchar2
   is
@@ -92,6 +94,8 @@ is
 
     return l_ret;
   end alert_info_sid;
+
+  --}}
 
   --{{ procedure reset_state
 
@@ -184,13 +188,12 @@ is
 
   procedure wait
   is
-    l_looper  boolean := true;
     l_alert st_alert;
     l_message varchar2(32767); 
     l_status  integer;
   begin
 
-    while (l_looper)
+    while (g_job_vector.count > 0)
     loop
 
       dbms_alert.waitany (
@@ -202,11 +205,6 @@ is
       g_return_tab( g_job_vector(l_alert) ).job_status := -1;
 
       g_job_vector.delete(l_alert);
-
-      if ( g_job_vector.count = 0)
-      then
-        l_looper := false; 
-      end if;
 
     end loop;
 
