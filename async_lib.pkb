@@ -207,6 +207,7 @@ is
       g_return_tab( g_job_vector(l_alert) ).message := l_msg;
 
       g_job_vector.delete(l_alert);
+      dbms_alert.remove(l_alert);
 
     end loop;
 
