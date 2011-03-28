@@ -40,8 +40,10 @@ is
   type t_job_map is table of st_job_name index by st_alert;
 
   type t_async_res_rec is record (
-    alert    st_alert
-  , message  st_msg
+    return_status integer
+  , error_code  varchar2(32)
+  , error_stack varchar2(1024)
+  , stack_trace varchar2(2048)
   );
 
   type t_async_res_tab is table of t_async_res_rec
@@ -61,10 +63,19 @@ is
   --<< public modules >>--
   ---------------------------
 
+  function serialize_msg (p_message in t_async_res_rec)
+    return st_msg;
+
+  function deserialize_msg ( p_message in st_msg )
+    return t_async_res_rec;
+    
   procedure reset_state;
 
   function alert_info_sid
     return varchar2;
+
+  function results_tab
+    return t_async_res_tab;
 
   function job_map
     return t_job_map;
