@@ -19,7 +19,7 @@ is
 
   --}}
 
-  --{{ ut_setup
+  --{{ procedure ut_setup
 
   procedure ut_setup
   is
@@ -169,6 +169,9 @@ is
   procedure ut_wait
   is
     l_job_map   async_lib.t_job_map;
+    l_res_tab   async_lib.t_async_res_tab;
+
+    l_tmp       async_lib.st_job_name;
 
     procedure setup
     is
@@ -198,7 +201,7 @@ is
 
     utassert.eq
     (
-      msg_in => 'job map count vs. constant before issuing wait()'
+      msg_in => 'job map count vs. constant before wait()'
     , check_this_in => l_job_map.count
     , against_this_in => 4
     );
@@ -206,8 +209,8 @@ is
     utassert.eq
     (
       msg_in =>
-        'job map count vs. data dictionary registered alerts ' ||
-        'before issuing wait()'
+        'job map count vs. sys.dbms_alert_info ' ||
+        'before wait()'
     , check_this_in => l_job_map.count
     , against_this_in => reg_alert_count()
     );
@@ -218,7 +221,7 @@ is
 
     utassert.eq
     (
-      msg_in => 'job map count vs. constant after issuing wait()'
+      msg_in => 'job map count vs. constant after wait()'
     , check_this_in => l_job_map.count
     , against_this_in => 0
     );
@@ -226,10 +229,47 @@ is
     utassert.eq
     (
       msg_in =>
-        'job map count vs. data dictionary registered alerts ' ||
-        'before issuing wait()'
+        'job map count vs. sys.dbms_alert_info ' ||
+        'after wait()'
     , check_this_in => l_job_map.count
     , against_this_in => reg_alert_count()
+    );
+
+    async_lib.reset_state();
+
+    async_lib.run('ut_async_lib_proc(1/0);');
+
+    l_job_map := async_lib.job_map();
+
+    utassert.eq
+    (
+      msg_in =>
+        'error job map count vs. constant for ' ||
+        '1/0 exception before wait()'
+    , check_this_in => l_job_map.count
+    , against_this_in => 1 
+    );
+
+    utassert.eq
+    (
+      msg_in => 'error job map count vs. sys.dbms_alert_info '||
+                'for 1/0 exception before wait()'
+    , check_this_in => l_job_map.count
+    , against_this_in => reg_alert_count()
+    );
+
+    async_lib.wait(l_res_tab);
+
+    l_tmp := l_res_tab.first();
+
+    utassert.this
+    (
+      msg_in => 'async error message for 1/0 exception'
+    , check_this_in =>
+          (
+            (l_res_tab(l_tmp).return_status = -1) and
+            (l_res_tab(l_tmp).error_code = 'ORA-1476')
+          )
     );
 
     -- 1. test message communication when a job raises an exception
@@ -375,6 +415,43 @@ is
       raise;
 
   end ut_alert_info_sid;
+
+  --}}
+
+  --{{ procedure ut_msg_serialization
+
+  procedure ut_msg_serialization
+  is
+
+    l_msg_serialized async_lib.st_msg;
+    l_msg_deserialized async_lib.t_async_res_rec;
+    l_test async_lib.t_async_res_rec;
+
+  begin
+
+    l_msg_deserialized.return_status := 0;
+    l_msg_deserialized.error_code := '-123456';
+
+    l_msg_serialized := async_lib.serialize_msg(l_msg_deserialized);
+
+    l_test := async_lib.deserialize_msg(l_msg_serialized);
+
+    utassert.eq
+    (
+      msg_in => 'return status serialization '
+    , check_this_in => l_test.return_status
+    , against_this_in => 0
+    );
+
+    utassert.eq
+    (
+      msg_in => 'error code serialization '
+    , check_this_in => l_test.error_code
+    , against_this_in => 'ORA-123456'
+    );
+
+     
+  end ut_msg_serialization;
 
   --}}
 

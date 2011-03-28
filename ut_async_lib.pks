@@ -15,6 +15,8 @@ is
 
   procedure ut_alert_info_sid;
 
+  procedure ut_msg_serialization;
+
   procedure test;
 
 end ut_async_lib;
