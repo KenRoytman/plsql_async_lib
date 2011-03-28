@@ -75,6 +75,93 @@ is
   --<< public modules >>--
   ------------------------
 
+  --{{ function serialize_msg
+
+  function serialize_msg ( p_message in t_async_res_rec )
+    return st_msg
+  is
+    l_ret st_msg;
+  begin
+
+    l_ret :=
+      replace
+      (
+        replace
+        (
+          '<rt>'||p_message.return_status||'</rt>'||
+          '<c>ORA'||p_message.error_code||'</c>'||
+          '<e>'
+          ||p_message.error_stack||
+          '</e><s>'
+          ||p_message.stack_trace||
+          '</s>'
+        , chr(10)
+        , ''
+        )
+      , chr(13)
+      , ''
+      );
+
+    return l_ret;
+
+  end serialize_msg;
+
+  --}}
+
+  --{{ function deserialize_msg
+
+  function deserialize_msg ( p_message in st_msg )
+    return t_async_res_rec
+  is
+    l_return t_async_res_rec;
+  begin
+
+    l_return.return_status :=
+      to_number(
+        substr
+        (
+          p_message
+        , instr(p_message,'<rt>',1,1) + 4
+        , instr(p_message,'</rt>',1,1) -
+          instr(p_message,'<rt>',1,1) - 4
+        )
+      );
+
+
+    l_return.error_code :=
+      substr
+      (
+        p_message
+      , instr(p_message,'<c>',1,1) + 3
+      , instr(p_message,'</c>',1,1) - 
+        instr(p_message,'<c>',1,1) - 3
+      );
+
+    l_return.error_stack :=
+      substr
+      (
+        p_message
+      , instr(p_message,'<e>',1,1) + 3
+      , instr(p_message,'</e>',1,1) - 
+        instr(p_message,'<e>',1,1) - 3
+      );
+      
+     l_return.stack_trace :=
+      substr
+      (
+        p_message
+      , instr(p_message,'<s>',1,1) + 3
+      , instr(p_message,'</s>',1,1) - 
+        instr(p_message,'<s>',1,1) - 3
+      );
+
+
+    return l_return;
+
+  end deserialize_msg;
+
+  --}}
+
   --{{ function alert_info_sid
 
   function alert_info_sid
@@ -110,7 +197,16 @@ is
 
   --}}
 
-  --{{ procedure job_map
+  --{{ function results_tab
+  function results_tab
+    return t_async_res_tab
+  is
+  begin
+    return g_return_tab;
+  end results_tab;
+  --}}  
+
+  --{{ function job_map
   function job_map
     return t_job_map
   is
@@ -146,40 +242,31 @@ is
 
     l_job_action := q'#
         declare
-          l_message async_lib.st_msg; 
+          l_message async_lib.t_async_res_rec;
+          l_message_str async_lib.st_msg; 
         begin #'||c||q'#
+
+          l_message.return_status := 0;
 
           dbms_alert.signal
           (
             name => '#'||l_alert||q'#'
-          , message => ''
+          , message => async_lib.serialize_msg(l_message)
           );
 
           commit;
 
         exception
           when others then
-            l_message :=
-              replace
-              (
-                replace
-                (
-                  '<e>'
-                  ||dbms_utility.format_error_stack()||
-                  '</e><s>'
-                  ||dbms_utility.format_error_backtrace()||
-                  '</s>'
-                , chr(10)
-                , ''
-                )
-              , chr(13)
-              , ''
-              );
-
+            l_message.return_status := -1;
+            l_message.error_code := sqlcode;
+            l_message.error_stack := dbms_utility.format_error_stack();
+            l_message.stack_trace := dbms_utility.format_error_backtrace();
+       
             dbms_alert.signal
             (
               name => '#'||l_alert||q'#'
-            , message => l_message
+            , message => async_lib.serialize_msg(l_message)
             );
         end; #';
  
@@ -223,8 +310,8 @@ is
       , status  => l_status
       );
 
-      g_return_tab( g_job_vector(l_alert) ).alert := l_alert;
-      g_return_tab( g_job_vector(l_alert) ).message := l_msg;
+      g_return_tab( g_job_vector(l_alert) ) :=
+        async_lib.deserialize_msg(l_msg);
 
       g_job_vector.delete(l_alert);
       dbms_alert.remove(l_alert);
@@ -271,7 +358,12 @@ is
       exit when ( l_iter is null );
 
       dbms_output.put_line( '<<job>>: '||l_iter);
-      dbms_output.put_line( '<<msg>>: '||p_async_results(l_iter).message );
+
+      dbms_output.put_line
+        ( '<<error stack>>: '||p_async_results(l_iter).error_code );
+
+      dbms_output.put_line
+        ( '<<stack trace>>: '||p_async_results(l_iter).stack_trace );
 
       l_iter := p_async_results.next(l_iter);
     end loop;
