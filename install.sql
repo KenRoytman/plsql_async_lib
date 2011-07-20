@@ -19,6 +19,5 @@ grant create procedure to &&install_user.
 grant select any dictionary to &&install_user.
 /
 
-
-grant alter system to &&dba_user.
+grant alter system to &&install_user.
 /
